@@ -332,16 +332,27 @@ toggleSidebarBtn.addEventListener("click", () => {
 });
 
 window.onload = async () => {
-  await fetchChatList();
-  if (chats.length > 0) {
-    currentChatIndex = 0;
+  const chatId = Date.now();
+  try {
+    const response = await fetch(`http://localhost:5000/chatsource/${chatId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: "" }),
+    });
+    if (!response.ok) throw new Error('Failed to create new chat');
+
+    await fetchChatList();
+    currentChatIndex = chats.findIndex(chat => chat.chat_id === chatId);
+    renderChatList();
     await loadChatHistory();
-  } else {
+    updateSidebarSelection();
+  } catch (error) {
+    addMessage('Error creating new chat on load: ' + error.message, 'bot');
     currentChatIndex = -1;
     responseArea.innerHTML = "";
   }
-  renderChatList();
-  updateSidebarSelection();
+
+  loadContextFiles();  
 };
 
 addChat.addEventListener('click', async () => {
