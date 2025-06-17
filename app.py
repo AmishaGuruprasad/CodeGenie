@@ -5,6 +5,7 @@ from tinydb import TinyDB, Query
 from datetime import datetime
 from flask_cors import CORS
 import time
+import uuid
 
 app = Flask(__name__)
 CORS(app)
@@ -26,6 +27,15 @@ for chat in chat_table.all():
     if (title == "New Chat" or title.startswith("Chat ")) and messages:
         chat_table.update({"title": messages[0]["user"]}, Chat.chat_id == chat["chat_id"])
         print(f"Updated chat {chat['chat_id']} title to: {messages[0]['user']}")
+@app.route("/start_chat", methods=["POST"])
+def start_chat():
+    new_chat_id = int(time.time())  
+    chat_table.insert({
+        "chat_id": new_chat_id,
+        "title": "New Chat",
+        "messages": []
+    })
+    return jsonify({"chat_id": new_chat_id})
 
 class ChatSource(Resource):
     def generate_code(self, prompt, chat_id):
