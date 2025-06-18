@@ -97,21 +97,22 @@ function addMessage(text, sender = 'user') {
 
 
 async function sendMessage(message) {
+  input.disabled = true;
+  sendButton.disabled = true;
+  sendButton.innerText = 'Generating...';
+
   let context = '';
-  if (window.contextFiles && window.contextFiles.length > 0) {
-    window.contextFiles.forEach(file => {
-      if (file.enabled) {
-        context += `\n\nContext from file "${file.name}":\n${file.content}\n\n`;
-      }
-    });
-  }
-  let promptWithContext = context + message;
 
   addMessage(message, 'user');
+
   if (currentChatIndex === -1 || !chats[currentChatIndex]) {
     addMessage('Please select or create a chat first.', 'bot');
+    input.disabled = false;
+    sendButton.disabled = false;
+    sendButton.innerText = 'Send';
     return;
   }
+
   const chatId = chats[currentChatIndex].chat_id;
   const botMessageElem = document.createElement('div');
   botMessageElem.classList.add('chat-message', 'bot-message');
@@ -119,19 +120,23 @@ async function sendMessage(message) {
   responseArea.scrollTop = responseArea.scrollHeight;
 
   try {
-    let response = await fetch(`http://localhost:5000/chatsource/${chatId}`, {
+    const response = await fetch(`http://localhost:5000/chatsource/${chatId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: promptWithContext }),
+      body: JSON.stringify({ prompt: context + message }),
     });
+
     if (response.status === 404) {
       botMessageElem.textContent = 'Chat not found. Please create a new chat.';
       return;
     }
+
     if (!response.ok) throw new Error('Network response was not ok');
+
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let botText = '';
+
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
@@ -139,6 +144,7 @@ async function sendMessage(message) {
       botMessageElem.innerHTML = marked.parse(botText);
       responseArea.scrollTop = responseArea.scrollHeight;
     }
+
     await fetch(`http://localhost:5000/chatsource/${chatId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -146,8 +152,11 @@ async function sendMessage(message) {
     });
   } catch (error) {
     botMessageElem.textContent = 'Error: ' + error.message;
+  } finally {
+    input.disabled = false;
+    sendButton.disabled = false;
+    sendButton.innerText = 'Send';
   }
-
 }
 
 
