@@ -303,11 +303,18 @@ header h1{
 }
 
 #context-files {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 5px;
+    max-height: 150px; /* Limit height */
+    overflow-y: auto;  /* Scroll if too many files */
+    flex-shrink: 0;
 }
+  
 .context-file {
   background: #222;
   color: #fff;
@@ -378,4 +385,19 @@ header h1{
 .copy-button-inline:hover {
     opacity: 1;
 }
+/* for file context*/ 
+.vscode-button {
+    background-color: #0e639c;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.vscode-button:hover {
+    background-color: #1177bb;
+}
   
+
+   
