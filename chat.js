@@ -7,9 +7,22 @@ const chatList = document.getElementById("chat-list");
 const toggleSidebarBtn = document.getElementById("toggle-sidebar-btn");
 const sidebar = document.getElementById("sidebar");
 const addChat = document.getElementById("new-chat-btn");
+const toggleContextBtn = document.getElementById('toggle-context-btn');
+const contextFilesDiv = document.getElementById('context-files');
+
+toggleContextBtn.addEventListener('click', () => {
+  const visible = contextFilesDiv.style.display === 'flex' || contextFilesDiv.style.display === 'block';
+  contextFilesDiv.style.display = visible ? 'none' : 'flex';
+  toggleContextBtn.textContent = visible ? '📂 Show Context Files' : '📂 Hide Context Files';
+});
+
+
+
 
 let chats = [];
 let currentChatIndex = -1;
+// file context
+let fileContextMap = {};
 
 async function fetchChatList() {
   try {
@@ -97,12 +110,85 @@ function addMessage(text, sender = 'user') {
 
 
 async function sendMessage(message) {
+  console.log("🧠 Sending user prompt:", message);
   input.disabled = true;
   sendButton.disabled = true;
   sendButton.innerText = 'Generating...';
 
   let context = '';
+  
 
+
+//   addMessage(message, 'user');
+
+  if (currentChatIndex === -1 || !chats[currentChatIndex]) {
+    addMessage('Please select or create a chat first.', 'bot');
+    input.disabled = false;
+    sendButton.disabled = false;
+    sendButton.innerText = 'Send';
+    return;
+  }
+
+//   const chatId = chats[currentChatIndex].chat_id;
+//   const botMessageElem = document.createElement('div');
+//   botMessageElem.classList.add('chat-message', 'bot-message');
+//   responseArea.appendChild(botMessageElem);
+//   responseArea.scrollTop = responseArea.scrollHeight;
+
+//   try {
+//     const response = await fetch(`http://localhost:5000/chatsource/${chatId}`, {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify({ prompt: context + message }),
+//     });
+
+//     if (response.status === 404) {
+//       botMessageElem.textContent = 'Chat not found. Please create a new chat.';
+//       return;
+//     }
+
+//     if (!response.ok) throw new Error('Network response was not ok');
+
+//     const reader = response.body.getReader();
+//     const decoder = new TextDecoder();
+//     let botText = '';
+
+//     while (true) {
+//       const { value, done } = await reader.read();
+//       if (done) break;
+//       botText += decoder.decode(value, { stream: true });
+//       botMessageElem.innerHTML = marked.parse(botText);
+//       responseArea.scrollTop = responseArea.scrollHeight;
+//     }
+
+//     await fetch(`http://localhost:5000/chatsource/${chatId}`, {
+//       method: 'PATCH',
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify({ user: message, assistant: botText })
+//     });
+//   } catch (error) {
+//     botMessageElem.textContent = 'Error: ' + error.message;
+//   } finally {
+//     input.disabled = false;
+//     sendButton.disabled = false;
+//     sendButton.innerText = 'Send';
+//   }
+// }
+
+// file context
+  if (window.contextFiles && window.contextFiles.length) {
+    const enabledFiles = window.contextFiles.filter(f => f.enabled).map(f => f.content);
+    context = enabledFiles.join('\n\n');
+  }
+  context += '\n\n' + Object.values(fileContextMap).join('\n\n'); // current + siblings
+  console.log("📎 Context size:", context.length);
+  if (context.length > 8000) {
+    context = context.slice(context.length - 8000); // keep last 8000 chars
+  }
+  
+  console.log("📤 Sending to backend:", { prompt: message, context });
+
+  
   addMessage(message, 'user');
 
   if (currentChatIndex === -1 || !chats[currentChatIndex]) {
@@ -123,7 +209,7 @@ async function sendMessage(message) {
     const response = await fetch(`http://localhost:5000/chatsource/${chatId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: context + message }),
+      body: JSON.stringify({ prompt:  message,context }),
     });
 
     if (response.status === 404) {
@@ -137,13 +223,27 @@ async function sendMessage(message) {
     const decoder = new TextDecoder();
     let botText = '';
 
+    // while (true) {
+    //   const { value, done } = await reader.read();
+    //   if (done) break;
+    //   botText += decoder.decode(value, { stream: true });
+    //   botMessageElem.innerHTML = marked.parse(botText);
+    //   responseArea.scrollTop = responseArea.scrollHeight;
+    // }
+
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-      botText += decoder.decode(value, { stream: true });
+      const chunk = decoder.decode(value, { stream: true });
+      if (chunk.includes('[Error:')) {
+        botMessageElem.textContent = chunk;
+        return;
+      }
+      botText += chunk;
       botMessageElem.innerHTML = marked.parse(botText);
       responseArea.scrollTop = responseArea.scrollHeight;
     }
+    
 
     await fetch(`http://localhost:5000/chatsource/${chatId}`, {
       method: 'PATCH',
@@ -158,6 +258,7 @@ async function sendMessage(message) {
     sendButton.innerText = 'Send';
   }
 }
+
 
 
 function renderChatList() {
@@ -302,7 +403,7 @@ async function deleteChat(chatId, index) {
     });
     if (!response.ok) throw new Error('Failed to delete chat');
     await fetchChatList();
-    if (chats.length === 0) {o
+    if (chats.length === 0) {
       currentChatIndex = -1;
       responseArea.innerHTML = "";
     } else {
@@ -323,6 +424,7 @@ function updateSidebarSelection() {
 
 sendButton.addEventListener("click", () => {
   const message = input.value.trim();
+  console.log("🔵 Send button clicked, message:", message); // ✅ Add this
   if (message) {
     sendMessage(message);
     input.value = '';
@@ -387,8 +489,123 @@ document.getElementById('attach-file-btn').addEventListener('click', () => {
   vscode.postMessage({ type: 'selectFile' });
 });
 
+// window.addEventListener('message', event => {
+//   const message = event.data;
+//   if (message.type === 'fileContent') {
+//     if (!window.contextFiles) window.contextFiles = [];
+//     if (!window.contextFiles.some(f => f.name === message.name && f.content === message.content)) {
+//       window.contextFiles.push({ name: message.name, content: message.content, enabled: true });
+//       saveContextFiles();
+//       updateContextFilesUI();
+//     }
+//   }
+// });
+
+// file context management
+// 📌 Added: handle initContext and file loading
 window.addEventListener('message', event => {
   const message = event.data;
+
+  if (message.command === 'initContext') {
+    const currentFileName = message.currentFileName || 'Current File';
+    fileContextMap = {}; // Reset file context map
+    fileContextMap[currentFileName] = message.currentFileContent;
+
+    // ✅ Auto-add current file to selectable context list
+    if (!window.contextFiles) window.contextFiles = [];
+
+    const existingIndex = window.contextFiles.findIndex(f => f.name === currentFileName);
+    if (existingIndex!== -1) {
+      window.contextFiles[existingIndex].content = message.currentFileContent;
+      window.contextFiles[existingIndex].enabled = true; // Ensure it's enabled
+    }else{
+      window.contextFiles.unshift({
+        name: currentFileName,
+        content: message.currentFileContent,
+        enabled: true // Default to enabled 
+      });
+    }
+    saveContextFiles();
+    updateContextFilesUI();
+  
+  
+      
+
+    const contextDiv = document.getElementById('context-files');
+    contextDiv.innerHTML = ''; // Clear existing context files
+    const fileList = message.fileList || [];
+    const listContainer = document.createElement('div');
+    listContainer.style.maxHeight = '300px';
+    listContainer.style.overflowY = 'auto';
+    listContainer.style.border = '1px solid #333';
+    listContainer.style.padding = '8px';
+    listContainer.style.borderRadius = '4px';
+    listContainer.style.background = '#1e1e1e';
+
+    fileList.forEach(file => {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.justifyContent = 'space-between';
+      row.style.padding = '4px 0';
+      row.style.borderBottom = '1px solid #333';
+      row.style.fontSize = '12px';
+      row.style.color = '#ccc';
+  
+      const fileName = document.createElement('span');
+      fileName.textContent = file.name;
+      fileName.style.overflow = 'hidden';
+      fileName.style.textOverflow = 'ellipsis';
+      fileName.style.whiteSpace = 'nowrap';
+      fileName.style.flexGrow = '1';
+  
+      const addBtn = document.createElement('button');
+      addBtn.textContent = '➕';
+      addBtn.title = 'Add this file to context';
+      addBtn.style.background = '#0e639c';
+      addBtn.style.color = '#fff';
+      addBtn.style.border = 'none';
+      addBtn.style.padding = '2px 6px';
+      addBtn.style.borderRadius = '3px';
+      addBtn.style.cursor = 'pointer';
+  
+      addBtn.onclick = () => {
+        vscode.postMessage({ command: 'readFile', path: file.path });
+      };
+  
+      row.appendChild(fileName);
+      row.appendChild(addBtn);
+      listContainer.appendChild(row);
+    });
+  
+    contextDiv.appendChild(listContainer);
+  }
+
+
+
+  // if (message.command === 'fileContent') {
+  //   fileContextMap[message.path] = message.content;
+  // }
+  if (message.command === 'fileContent') {
+    const path = message.path;
+    const content = message.content;
+  
+    // ✅ Store in fileContextMap for context usage
+    fileContextMap[path] = content;
+  
+    // ✅ Add to visible list and window.contextFiles for checkboxes
+    if (!window.contextFiles) window.contextFiles = [];
+  
+    const alreadyAdded = window.contextFiles.some(f => f.name === path);
+    if (!alreadyAdded) {
+      window.contextFiles.push({ name: path, content: content, enabled: true });
+      updateContextFilesUI(); // This function already renders the toggleable file chips
+      saveContextFiles();
+    }
+  }
+  
+
+  // 📌 Existing handler preserved
   if (message.type === 'fileContent') {
     if (!window.contextFiles) window.contextFiles = [];
     if (!window.contextFiles.some(f => f.name === message.name && f.content === message.content)) {
@@ -397,7 +614,8 @@ window.addEventListener('message', event => {
       updateContextFilesUI();
     }
   }
-});
+  });
+// Remove the unmatched closing parenthesis
 
 
 function updateContextFilesUI() {
@@ -448,4 +666,10 @@ function summarizeTitle(title, wordLimit = 5, charLimit = 30) {
   }
 
   return summary + (words.length > wordLimit || title.length > charLimit ? '...' : '');
-}
+};
+
+
+
+
+
+
