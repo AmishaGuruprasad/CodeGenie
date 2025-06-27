@@ -9,8 +9,9 @@ const sidebar = document.getElementById("sidebar");
 const addChat = document.getElementById("new-chat-btn");
 
 
-const api_root = `https://91e2-104-199-252-207.ngrok-free.app/`
+const api_root = `http://192.168.10.178:8000/`
 
+let fileContextMap = {};
 
 function addMessage(text, sender = 'user') {
   const messageElem = document.createElement('div');
@@ -19,6 +20,7 @@ function addMessage(text, sender = 'user') {
 
   if (sender === 'bot') {
     const html = marked.parse(text); //converts text to html content
+    console.log("hi");
     messageElem.innerHTML = html;
     renderResponse(messageElem);
   } else {
@@ -88,15 +90,19 @@ async function sendMessage(message) {
     }
     renderResponse(botMessageElem);
 
-    if (!old_chat) {
-      addSidebarElement(chatid, summarizeTitle(message));
+    if (!old_chat){
+      let response = await fetch(`${api_root}generate_prompt_name?prompt=${encodeURIComponent(message)}`,{  //  NEED TO CHANGE ROUTE !!!!!!!!!!!!!!!!!
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      });
+      let data = await response.json();
+      let result = data["summarized_text"]
+      addSidebarElement(chatid, result);
       document.getElementById(chatid).classList.add("selected");
     }
+  } catch (error) {
+    botMessageElem.textContent = 'Error: ' + error.message;
   }
-  // } catch (error) {
-  //   botMessageElem.textContent = 'Error: ' + error.message;
-  // }
-  finally{}
 }
 
 function renderResponse(botMessageElem) {
@@ -177,10 +183,10 @@ function showRenameInput(li) {
   const save = async () => {
     const newTitle = input.value.trim();
     if (newTitle && newTitle !== li.children[0].textContent) {
-      const response = await fetch(`${api_root}chatsource/${li.getAttribute("id")}`, {
+      const response = await fetch(`${api_root}chat/${li.getAttribute("id")}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTitle }),
+        body: JSON.stringify({ chat_title: newTitle }),
       });
       if (response.ok) {
         li.children[0].textContent = newTitle;
@@ -276,14 +282,16 @@ async function loadChatHistory(chatId) {
     if (messages){
       for (const message of messages) {
         addMessage(message.user, 'user');
-        addMessage(message.assistant, 'assistant');
+        addMessage(message.bot, 'bot');
       }
     } else {
       console.log("No messages found") 
     }
-  } catch (error) {
-    addMessage('Error loading chat history: ' + error.message, 'bot');
   }
+  //  catch (error) {
+  //   addMessage('Error loading chat history: ' + error.message, 'bot');
+  // }
+  finally{}
   responseArea.scrollTop = responseArea.scrollHeight;
 }
 
@@ -348,58 +356,83 @@ document.getElementById('attach-file-btn').addEventListener('click', () => {
   vscode.postMessage({ type: 'selectFile' });
 });
 
+function generateFileId(fileContent) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(fileContent);
+  crypto.subtle.digest("SHA-256", data).then(hashBuffer => {
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    console.log(hashHex);
+    return hashHex;
+  });
+}
+
 window.addEventListener('message', event => {
   const message = event.data;
+
+  if (message.command === 'initContext') {  //this is for adding the current file to the context files
+    // fileContextMap = {}; // Reset file context map
+
+    let fileId = generateFileId(message.currentFileContent);
+    fileContextMap[fileId] = {
+        name : message.currentFileName,
+        content : message.currentFileContent,
+        enabled : false
+    };
+
+    addFileUI(fileId);
+  }
+
   if (message.type === 'fileContent') {
-    if (!window.contextFiles) window.contextFiles = [];
-    if (!window.contextFiles.some(f => f.name === message.name && f.content === message.content)) {
-      window.contextFiles.push({ name: message.name, content: message.content, enabled: true });
+    let fileId = generateFileId(message.content);
+    if (!(fileId in fileContextMap)) {
+      fileContextMap[fileId] = {name: message.name, content: message.content, enabled: true};
       saveContextFiles();
-      updateContextFilesUI();
+      addFileUI(fileId);
     }
   }
 });
 
 
-function updateContextFilesUI() {
-  const contextDiv = document.getElementById('context-files');
-  contextDiv.innerHTML = '';
-  if (window.contextFiles && window.contextFiles.length > 0) {
-    window.contextFiles.forEach((file, idx) => {
-      const fileElem = document.createElement('span');
-      fileElem.className = 'context-file';
-      fileElem.textContent = file.name;
+function addFileUI(fileId){
+  const file = fileContextMap[fileId];
+  const fileElem = document.createElement('span');
+  fileElem.className = 'context-file';
+  fileElem.textContent = file.name;
+  // fileElem.setAttribute("id", fileId);
 
-      const toggle = document.createElement('input');
-      toggle.type = 'checkbox';
-      toggle.checked = file.enabled;
-      toggle.onchange = () => { file.enabled = toggle.checked; };
-      fileElem.appendChild(toggle);
+  const toggle = document.createElement('input');
+  toggle.type = 'checkbox';
+  toggle.checked = file.enabled;
+  toggle.onchange = () => { file.enabled = toggle.checked; };
+  fileElem.appendChild(toggle);
 
-      const removeBtn = document.createElement('button');
-      removeBtn.textContent = '✖';
-      removeBtn.className = 'remove-context-file';
-      removeBtn.onclick = () => {
-        window.contextFiles.splice(idx, 1);
-        updateContextFilesUI();
-        saveContextFiles();
-      };
-      fileElem.appendChild(removeBtn);
+  const removeBtn = document.createElement('button');
+  removeBtn.textContent = '✖';
+  removeBtn.className = 'remove-context-file';
 
-      contextDiv.appendChild(fileElem);
-    });
-  }
+  removeBtn.onclick = () => {
+    delete fileContextMap[fileId];
+    fileElem.remove();
+    saveContextFiles();
+  };
+  fileElem.appendChild(removeBtn);
+
+  contextDiv.appendChild(fileElem);
 }
 
 function saveContextFiles() {
-  vscode.setState({ contextFiles: window.contextFiles });
+  vscode.setState({ contextFiles: fileContextMap });  //find what this does and if its needed
 }
 
 function loadContextFiles() {
   const state = vscode.getState();
-  window.contextFiles = (state && state.contextFiles) ? state.contextFiles : [];
-  updateContextFilesUI();
+  window.fileContextMap = (state && state.fileContextMap) ? state.fileContextMap : {};
+  for (let fileId in fileContextMap) {
+    addFileUI(fileId);
+  }
 }
+
 function summarizeTitle(title, wordLimit = 5, charLimit = 30) {
   const words = title.split(' ');
   let summary = words.slice(0, wordLimit).join(' ');
@@ -410,3 +443,13 @@ function summarizeTitle(title, wordLimit = 5, charLimit = 30) {
 
   return summary + (words.length > wordLimit || title.length > charLimit ? '...' : '');
 }
+
+
+
+
+
+
+
+
+
+

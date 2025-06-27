@@ -1,0 +1,48 @@
+#mainDiv{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 5rem;
+    gap: 20px;
+}
+
+.inputBox{
+    width: 20rem;
+    border-radius: 4px;
+    font-size: medium;
+    margin-top: 15px;
+}
+
+#nameInput{
+    display: none;
+}
+
+#rememberDiv{
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+#signUpButton{
+    display: none;
+}
+
+.links{
+    cursor: pointer;
+    color: blue;
+}
+
+#signUpLink{
+    margin-left: 10px;
+}
+
+#signInLink{
+    display: none;
+}
+
+.buttons{
+    border-radius: 6px;
+    font-size: medium;
+    margin-top: 5px;
+}
+

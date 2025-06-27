@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeGenie Login</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+    <div id="mainDiv">
+        <h1>CodeGenie</h1>
+        <input type="text" required id="emailInput" placeholder="Enter your EmailID" class="inputBox"/>
+        <input type="text" required id="nameInput" placeholder="Enter your Name" class="inputBox"/>
+        <input type="password" required id="pswdInput" placeholder="Enter your Password" class="inputBox"/>
+        <div id="rememberDiv">
+            <input type="checkbox" id="rememberBox">
+            <p>Remember Me</p>
+        </div>
+        <button type="submit" id="signInButton" class="buttons">Sign In</button>
+        <button type="button" id="signUpButton" class="buttons">Sign Up</button>
+        <!-- <button type="button" id="guestModeButton" class="buttons">Guest Mode</button> -->
+        <p id="noAcc">Don't have an account? <a id="signUpLink" class="links"><u>Sign Up</u></a></p>
+        <a id="signInLink" class="links"><u>Back to Sign In</u></a>
+        <a id="guestModeLink" class="links"><u>Guest Mode</u></a>
+    </div>
+    <script src="login.js"></script>
+</body>
+</html>
