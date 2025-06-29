@@ -7,11 +7,20 @@ const chatList = document.getElementById("chat-list");
 const toggleSidebarBtn = document.getElementById("toggle-sidebar-btn");
 const sidebar = document.getElementById("sidebar");
 const addChat = document.getElementById("new-chat-btn");
+const toggleContextBtn = document.getElementById('toggle-context-btn');
+const contextDiv = document.getElementById('context-files');
 
+toggleContextBtn.addEventListener('click', () => {
+  const visible = contextDiv.style.display === 'flex' || contextDiv.style.display === 'block';
+  contextDiv.style.display = visible ? 'none' : 'flex';
+  toggleContextBtn.textContent = visible ? '📂 Show Context Files' : '📂 Hide Context Files';
+});
 
-const api_root = `http://192.168.10.178:8000/`
+const api_root = `http://127.0.0.1:8000/`
 
 let fileContextMap = {};
+
+
 
 function addMessage(text, sender = 'user') {
   const messageElem = document.createElement('div');
@@ -33,12 +42,13 @@ function addMessage(text, sender = 'user') {
 
 async function sendMessage(message) {
   let context = '';
-  if (window.contextFiles && window.contextFiles.length > 0) {
-    window.contextFiles.forEach(file => {
+  if (fileContextMap && Object.keys(fileContextMap).length > 0) {
+    for (let fileId in fileContextMap) {
+      let file = fileContextMap[fileId];
       if (file.enabled) {
         context += `\n\nContext from file "${file.name}":\n${file.content}\n\n`;
       }
-    });
+    };
   }
   let promptWithContext = context + message;
 
@@ -63,7 +73,7 @@ async function sendMessage(message) {
     req_body = {
       chat_id: chatid,
       prompt: promptWithContext,
-      chat_title: promptWithContext
+      chat_title: message
     };
   }
 
@@ -326,9 +336,11 @@ function addSidebarElement (chatid, title) {
 
 async function fetchChatList() {
   try {
+    console.log("1");
     const response = await fetch(`${api_root}list-all-chats`);
     if (!response.ok) throw new Error('Failed to fetch chat list');
     const allChats = await response.json();
+    console.log("2");
     let chats = allChats; //list of chat objects 
     chats.forEach((chat) => {
       addSidebarElement(chat.chat_id,chat.chat_title);
@@ -339,6 +351,7 @@ async function fetchChatList() {
 }
 
 window.onload = async () => {
+  console.log(window.origin);
     await fetchChatList();
     loadContextFiles();  
 };
@@ -356,24 +369,20 @@ document.getElementById('attach-file-btn').addEventListener('click', () => {
   vscode.postMessage({ type: 'selectFile' });
 });
 
-function generateFileId(fileContent) {
+async function generateFileId(fileContent) {
   const encoder = new TextEncoder();
   const data = encoder.encode(fileContent);
-  crypto.subtle.digest("SHA-256", data).then(hashBuffer => {
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    console.log(hashHex);
-    return hashHex;
-  });
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
 }
 
-window.addEventListener('message', event => {
-  const message = event.data;
-
+async function messageEventHandler(message) {
   if (message.command === 'initContext') {  //this is for adding the current file to the context files
     // fileContextMap = {}; // Reset file context map
 
-    let fileId = generateFileId(message.currentFileContent);
+    let fileId = await generateFileId(message.currentFileContent);
     fileContextMap[fileId] = {
         name : message.currentFileName,
         content : message.currentFileContent,
@@ -384,13 +393,21 @@ window.addEventListener('message', event => {
   }
 
   if (message.type === 'fileContent') {
-    let fileId = generateFileId(message.content);
+    let fileId = await generateFileId(message.content);
+    console.log(fileContextMap);
     if (!(fileId in fileContextMap)) {
+      console.log(fileContextMap);
       fileContextMap[fileId] = {name: message.name, content: message.content, enabled: true};
       saveContextFiles();
       addFileUI(fileId);
     }
   }
+}
+
+
+window.addEventListener('message', event => {
+  const message = event.data;
+  messageEventHandler(message);
 });
 
 
@@ -422,7 +439,7 @@ function addFileUI(fileId){
 }
 
 function saveContextFiles() {
-  vscode.setState({ contextFiles: fileContextMap });  //find what this does and if its needed
+  vscode.setState({ fileContextMap: fileContextMap });  //find what this does and if its needed
 }
 
 function loadContextFiles() {
