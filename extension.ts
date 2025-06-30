@@ -1,14 +1,13 @@
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-const RelativePattern = vscode.RelativePattern;
+import axios from 'axios';
+//const RelativePattern = vscode.RelativePattern;
 
 
-let inlineDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let panel: vscode.WebviewPanel | undefined = undefined;
-let inlineSuggestionsEnabled: boolean = false;
 let fileContextMap: { [key: string]: string } = {}; // Added declaration for fileContextMap
-
 let isAutoCompleteEnabled = false;
 
 let debounceTimer: NodeJS.Timeout | undefined;
@@ -16,29 +15,6 @@ let lastPromiserResolver: ((value:vscode.InlineCompletionList | PromiseLike<vsco
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Code Genie extension activated');
-
-  const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-  function updateStatusBar() {
-    statusBarItem.text = inlineSuggestionsEnabled
-      ? '$(check) Genie Suggestions: On'
-      : '$(x) Genie Suggestions: Off';
-    statusBarItem.tooltip = 'Click to toggle Code Genie inline suggestions';
-  }
-  updateStatusBar();
-  statusBarItem.command = 'code-genie.toggleInlineSuggestions';
-  statusBarItem.show();
-  context.subscriptions.push(statusBarItem);
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand('code-genie.toggleInlineSuggestions', () => {
-      inlineSuggestionsEnabled = !inlineSuggestionsEnabled;
-      updateStatusBar();
-      vscode.window.showInformationMessage(
-        `Inline suggestions ${inlineSuggestionsEnabled ? 'enabled' : 'disabled'}.`
-      );
-    })
-  );
-
 
   context.subscriptions.push(
     vscode.commands.registerCommand('code-genie.openchat', async () => {
@@ -155,13 +131,7 @@ export function activate(context: vscode.ExtensionContext) {
           //     content: doc.getText()
           //   });
           // }
-          if (message.type === 'toggleInlineSuggestions') {
-            inlineSuggestionsEnabled = message.enabled;
-            updateStatusBar();
-            vscode.window.showInformationMessage(
-              `Inline suggestions ${inlineSuggestionsEnabled ? 'enabled' : 'disabled'}.`
-            );
-          }
+          
           if (message.type === 'fileUpload') {
             const fileName = message.filename;
             const fileContent = message.content;
@@ -223,58 +193,101 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  context.subscriptions.push(
-    vscode.languages.registerInlineCompletionItemProvider(
-      [
-        { scheme: 'file', language: 'python' },
-        { scheme: 'file', language: 'javascript' },
-        { scheme: 'file', language: 'typescript' },
-        { scheme: 'file', language: 'java' },
-        { scheme: 'file', language: 'csharp' }
-      ],
-      {
-        async provideInlineCompletionItems(document, position, context, token) {
-          console.log('Genie inline provider called for language:', document.languageId);
-          if (!inlineSuggestionsEnabled) return { items: [] };
+  const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right,100);
+  statusBarItem.text = '$(X) CodeGenie: OFF';
+  statusBarItem.tooltip = 'Toggle CodeGenie Autocomplete';
+  statusBarItem.command = 'code-genie.toggleAutocomplete';
+  statusBarItem.show();
+  context.subscriptions.push(statusBarItem);
 
-          if (inlineDebounceTimer) clearTimeout(inlineDebounceTimer);
-          return new Promise<vscode.InlineCompletionList>(resolve => {
-            inlineDebounceTimer = setTimeout(async () => {
-              const linePrefix = document.lineAt(position).text.substr(0, position.character);
-              const fileContent = document.getText();
-              
-              try {
-                const response = await fetch('http://127.0.0.1:5000/autocomplete', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ prompt: fileContent, linePrefix })
-                });
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const suggestions = (await response.json()) as string[];
-                console.log('Suggestions received:', suggestions);
-                if (suggestions.length === 0) {
-                  resolve({ items: [] });
-                  return;
-                }
-                const ghostText = suggestions[0];
-                const inlineItem = new vscode.InlineCompletionItem(
-                  ghostText,
-                  new vscode.Range(position, position)
-                );
-                resolve({ items: [inlineItem] });
-              } catch (err) {
-                console.error('Error fetching suggestions:', err);
-                resolve({ items: [] });
-              } finally {
-                inlineDebounceTimer = null;
-              }
-            }, 500);
-          });
-        }
-      }
-    )
+  context.subscriptions.push(
+    vscode.commands.registerCommand('code-genie.toggleAutocomplete', () => {
+      isAutoCompleteEnabled = !isAutoCompleteEnabled;
+      statusBarItem.text = isAutoCompleteEnabled ? '$(check) CodeGenie: ON' : '$(x) CodeGenie: OFF';
+      vscode.window.showInformationMessage(`CodeGenie Autocomplete ${isAutoCompleteEnabled ? 'Enabled' : 'Disabled'}`);
+    })
   );
 
-  vscode.workspace.getConfiguration().update('editor.inlineSuggest.enabled', true, true);
+  const provider: vscode.InlineCompletionItemProvider ={
+    provideInlineCompletionItems: function (document, position, context, token) {
+      if (!isAutoCompleteEnabled) {
+        return Promise.resolve({ items: [] });
+      }
+
+      const textBeforeCursor = document.getText(new vscode.Range(new vscode.Position(0,0),position));
+      const textAfterCursor = document.getText(new vscode.Range(position, new vscode.Position(document.lineCount,0)));
+      return new Promise<vscode.InlineCompletionList>((resolve)=>{
+        if(debounceTimer){
+          clearTimeout(debounceTimer);
+        }
+
+        if(lastPromiserResolver){
+          lastPromiserResolver({items: []});
+        }
+
+        lastPromiserResolver = resolve;
+        let full_prompt = `<|fim_start|>${textBeforeCursor}<|fim_hole|>${textAfterCursor}<|fim_end|>`;
+        
+        console.log(`full_prompt: ${full_prompt}`);
+
+        debounceTimer = setTimeout(async() =>{
+          const suggestion = await getSuggestionFromApi(full_prompt);
+
+          resolve({
+            items:suggestion?[
+              {
+                insertText: suggestion,
+                range: new vscode.Range(position.translate(0,0),position),
+              }
+            ]:[]
+          });
+
+          lastPromiserResolver = undefined;
+        },3000); //--> 3000ms ->3sec it will wait
+
+      });
+    }
+  };
+  context.subscriptions.push(
+    vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, provider)
+  );
 }
+
+
+
+async function getSuggestionFromApi(full_prompt: string): Promise<string | null> {
+  if (!full_prompt.trim()) return null;
+
+  try {
+    const response = await axios.post(
+      "https://61d3-34-73-152-117.ngrok-free.app",
+      { prompt: full_prompt },
+      {
+        headers: {
+          "Content-Type": "application/json"
+        },
+        // Optional: add this if you want to ignore SSL issues (not recommended for production)
+        httpsAgent: new (require("https").Agent)({ rejectUnauthorized: false })
+      }
+    );
+
+    if (response.status !== 200) {
+      console.error("Autocomplete error:", response.status, response.data);
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+
+    return response.data.text.trim();
+  } catch (err) {
+    console.error("Network error during autocomplete:", err);
+    return null;
+  }
+}
+
+export function deactivate() {
+  if (panel) {
+    panel.dispose();
+  }
+}
+
+  
 
