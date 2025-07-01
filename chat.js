@@ -16,7 +16,7 @@ toggleContextBtn.addEventListener('click', () => {
   toggleContextBtn.textContent = visible ? '📂 Show Context Files' : '📂 Hide Context Files';
 });
 
-const api_root = `http://127.0.0.1:8000/`
+const api_root = `https://e8e3-34-41-73-8.ngrok-free.app/`
 
 let fileContextMap = {};
 
@@ -73,13 +73,14 @@ async function sendMessage(message) {
     req_body = {
       chat_id: chatid,
       prompt: promptWithContext,
-      chat_title: message
+      chat_title: generateChatTitle(message)
     };
   }
 
   try {
-    let response = await fetch(`${api_root}chat`, {  //  NEED TO CHANGE ROUTE !!!!!!!!!!!!!!!!!
+    let response = await fetch(`${api_root}chat`, {  
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req_body),
     });
@@ -99,20 +100,29 @@ async function sendMessage(message) {
       responseArea.scrollTop = responseArea.scrollHeight;
     }
     renderResponse(botMessageElem);
+    addSidebarElement(chatid, message);
+    document.getElementById(chatid).classList.add("selected");
 
-    if (!old_chat){
-      let response = await fetch(`${api_root}generate_prompt_name?prompt=${encodeURIComponent(message)}`,{  //  NEED TO CHANGE ROUTE !!!!!!!!!!!!!!!!!
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      });
-      let data = await response.json();
-      let result = data["summarized_text"]
-      addSidebarElement(chatid, result);
-      document.getElementById(chatid).classList.add("selected");
-    }
   } catch (error) {
     botMessageElem.textContent = 'Error: ' + error.message;
   }
+}
+
+function generateChatTitle(prompt, numKeywords = 10) {
+  const text = prompt.toLowerCase().replace(/[^\w\s]/g, '');
+  const stopWords = new Set(['the', 'what', 'write', 'is', 'and', 'a', 'an', 'in', 'on', 'with', 'for', 'this', 'give', 'generate']);
+  const words = text.split(/\s+/).filter(word => !stopWords.has(word) && word !== '');
+  const freqMap = {};
+  for (const word of words) {
+    freqMap[word] = (freqMap[word] || 0) + 1;
+  }
+  const mostCommon = Object.entries(freqMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, numKeywords)
+    .map(([word]) => word);
+  const summarizedText = mostCommon.join(' ');
+  const result = summarizedText.charAt(0).toUpperCase() + summarizedText.slice(1);
+  return result;
 }
 
 function renderResponse(botMessageElem) {
@@ -166,7 +176,8 @@ toggleSidebarBtn.addEventListener("click", () => {
 async function deleteChat(chatId) {
   try {
     const response = await fetch(`${api_root}chat/${chatId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      credentials: 'include',
     });
     if (!response.ok) throw new Error('Failed to delete chat');
 
@@ -195,6 +206,7 @@ function showRenameInput(li) {
     if (newTitle && newTitle !== li.children[0].textContent) {
       const response = await fetch(`${api_root}chat/${li.getAttribute("id")}`, {
         method: "PATCH",
+        credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_title: newTitle }),
       });
@@ -281,7 +293,11 @@ function updateSidebarSelection(li) {
 async function loadChatHistory(chatId) {
   responseArea.innerHTML = "";
   try {
-    const response = await fetch(`${api_root}chat/${chatId}`);
+    const response = await fetch(`${api_root}chat/${chatId}`,{
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json',"ngrok-skip-browser-warning": "true"},
+        credentials: 'include'
+      });
     if (response.status === 404) {
       addMessage('No history found for this chat.', 'bot');
       return;
@@ -336,11 +352,13 @@ function addSidebarElement (chatid, title) {
 
 async function fetchChatList() {
   try {
-    console.log("1");
-    const response = await fetch(`${api_root}list-all-chats`);
+    const response = await fetch(`${api_root}list-all-chats`,{
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json',"ngrok-skip-browser-warning": "true"},
+      credentials: 'include'
+    });
     if (!response.ok) throw new Error('Failed to fetch chat list');
     const allChats = await response.json();
-    console.log("2");
     let chats = allChats; //list of chat objects 
     chats.forEach((chat) => {
       addSidebarElement(chat.chat_id,chat.chat_title);
@@ -351,9 +369,8 @@ async function fetchChatList() {
 }
 
 window.onload = async () => {
-  console.log(window.origin);
-    await fetchChatList();
-    loadContextFiles();  
+  await fetchChatList();
+  loadContextFiles();  
 };
 
 
@@ -450,16 +467,6 @@ function loadContextFiles() {
   }
 }
 
-function summarizeTitle(title, wordLimit = 5, charLimit = 30) {
-  const words = title.split(' ');
-  let summary = words.slice(0, wordLimit).join(' ');
-
-  if (summary.length > charLimit) {
-    summary = summary.slice(0, charLimit).trim();
-  }
-
-  return summary + (words.length > wordLimit || title.length > charLimit ? '...' : '');
-}
 
 
 

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h3>Checking session...</h3>
+    <script>
+        const api_root = "https://e8e3-34-41-73-8.ngrok-free.app/"
+        const vscode = acquireVsCodeApi();
+        console.log(window.origin);
+        (async () => {
+            const response = await fetch(`${api_root}validate`, { 
+                method: 'GET',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json', "ngrok-skip-browser-warning": "true" },
+            });
+            if (response.ok) {
+                vscode.postMessage({ command: 'openChat' });
+            } else {
+                vscode.postMessage({ command: 'openLogin' });
+            }
+        })();
+    </script>
+</body>
+</html>
+
