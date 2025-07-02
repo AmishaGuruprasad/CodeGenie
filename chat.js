@@ -7,9 +7,21 @@ const chatList = document.getElementById("chat-list");
 const toggleSidebarBtn = document.getElementById("toggle-sidebar-btn");
 const sidebar = document.getElementById("sidebar");
 const addChat = document.getElementById("new-chat-btn");
+const toggleContextBtn = document.getElementById('toggle-context-btn');
+const contextDiv = document.getElementById('context-files');
 
+toggleContextBtn.addEventListener('click', () => {
+  const visible = contextDiv.style.display === 'flex' || contextDiv.style.display === 'block';
+  contextDiv.style.display = visible ? 'none' : 'flex';
+  toggleContextBtn.textContent = visible ? '📂 Show Context Files' : '📂 Hide Context Files';
+});
 
-const api_root = `http://192.168.19.29:8000/`
+const api_root = `http://192.168.23.97:8000/`
+
+let fileContextMap = {};
+
+let userId=""; 
+
 
 
 function addMessage(text, sender = 'user') {
@@ -32,12 +44,13 @@ function addMessage(text, sender = 'user') {
 
 async function sendMessage(message) {
   let context = '';
-  if (window.contextFiles && window.contextFiles.length > 0) {
-    window.contextFiles.forEach(file => {
+  if (fileContextMap && Object.keys(fileContextMap).length > 0) {
+    for (let fileId in fileContextMap) {
+      let file = fileContextMap[fileId];
       if (file.enabled) {
         context += `\n\nContext from file "${file.name}":\n${file.content}\n\n`;
       }
-    });
+    };
   }
   let promptWithContext = context + message;
 
@@ -62,14 +75,17 @@ async function sendMessage(message) {
     req_body = {
       chat_id: chatid,
       prompt: promptWithContext,
-      chat_title: promptWithContext
+      chat_title: generateChatTitle(message)
     };
   }
 
   try {
-    let response = await fetch(`${api_root}chat`, {  //  NEED TO CHANGE ROUTE !!!!!!!!!!!!!!!!!
+    let response = await fetch(`${api_root}chat`, {  
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-User-Id':`${userId}`
+      },
       body: JSON.stringify(req_body),
     });
     if (response.status === 404) {
@@ -88,14 +104,29 @@ async function sendMessage(message) {
       responseArea.scrollTop = responseArea.scrollHeight;
     }
     renderResponse(botMessageElem);
+    addSidebarElement(chatid, message);
+    document.getElementById(chatid).classList.add("selected");
 
-    if (!old_chat) {
-      addSidebarElement(chatid, summarizeTitle(message));
-      document.getElementById(chatid).classList.add("selected");
-    }
   } catch (error) {
     botMessageElem.textContent = 'Error: ' + error.message;
   }
+}
+
+function generateChatTitle(prompt, numKeywords = 10) {
+  const text = prompt.toLowerCase().replace(/[^\w\s]/g, '');
+  const stopWords = new Set(['the', 'what', 'write', 'is', 'and', 'a', 'an', 'in', 'on', 'with', 'for', 'this', 'give', 'generate']);
+  const words = text.split(/\s+/).filter(word => !stopWords.has(word) && word !== '');
+  const freqMap = {};
+  for (const word of words) {
+    freqMap[word] = (freqMap[word] || 0) + 1;
+  }
+  const mostCommon = Object.entries(freqMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, numKeywords)
+    .map(([word]) => word);
+  const summarizedText = mostCommon.join(' ');
+  const result = summarizedText.charAt(0).toUpperCase() + summarizedText.slice(1);
+  return result;
 }
 
 function renderResponse(botMessageElem) {
@@ -149,7 +180,10 @@ toggleSidebarBtn.addEventListener("click", () => {
 async function deleteChat(chatId) {
   try {
     const response = await fetch(`${api_root}chat/${chatId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: { 
+        'X-User-Id':`${userId}`
+      },
     });
     if (!response.ok) throw new Error('Failed to delete chat');
 
@@ -178,7 +212,10 @@ function showRenameInput(li) {
     if (newTitle && newTitle !== li.children[0].textContent) {
       const response = await fetch(`${api_root}chat/${li.getAttribute("id")}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-User-Id':`${userId}`
+         },
         body: JSON.stringify({ chat_title: newTitle }),
       });
       if (response.ok) {
@@ -264,7 +301,11 @@ function updateSidebarSelection(li) {
 async function loadChatHistory(chatId) {
   responseArea.innerHTML = "";
   try {
-    const response = await fetch(`${api_root}chat/${chatId}`);
+    const response = await fetch(`${api_root}chat/${chatId}`,{
+      headers : {
+        'X-User-Id':`${userId}`
+      }
+    });
     if (response.status === 404) {
       addMessage('No history found for this chat.', 'bot');
       return;
@@ -319,7 +360,11 @@ function addSidebarElement (chatid, title) {
 
 async function fetchChatList() {
   try {
-    const response = await fetch(`${api_root}list-all-chats`);
+    const response = await fetch(`${api_root}list-all-chats`,{
+      headers : {
+        'X-User-Id':`${userId}`
+      }
+    });
     if (!response.ok) throw new Error('Failed to fetch chat list');
     const allChats = await response.json();
     let chats = allChats; //list of chat objects 
@@ -332,9 +377,15 @@ async function fetchChatList() {
 }
 
 window.onload = async () => {
-    await fetchChatList();
-    loadContextFiles();  
+  console.log("Hello from window.onload")
+    // await fetchChatList();
+    // loadContextFiles();  
 };
+document.addEventListener("DOMContentLoaded", async () => {
+  console.log("📦 DOM fully loaded");
+  // await fetchChatList();
+  // loadContextFiles();
+});
 
 
 addChat.addEventListener('click', async () => {
@@ -349,65 +400,96 @@ document.getElementById('attach-file-btn').addEventListener('click', () => {
   vscode.postMessage({ type: 'selectFile' });
 });
 
-window.addEventListener('message', event => {
-  const message = event.data;
+async function generateFileId(fileContent) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(fileContent);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
+async function messageEventHandler(message) {
+  if (message.command === 'initContext') {  //this is for adding the current file to the context files
+    // fileContextMap = {}; // Reset file context map
+    let fileId = await generateFileId(message.currentFileContent);
+    fileContextMap[fileId] = {
+        name : message.currentFileName,
+        content : message.currentFileContent,
+        enabled : false
+    };
+
+    addFileUI(fileId);
+  }
+
   if (message.type === 'fileContent') {
-    if (!window.contextFiles) window.contextFiles = [];
-    if (!window.contextFiles.some(f => f.name === message.name && f.content === message.content)) {
-      window.contextFiles.push({ name: message.name, content: message.content, enabled: true });
+    let fileId = await generateFileId(message.content);
+    console.log(fileContextMap);
+    if (!(fileId in fileContextMap)) {
+      console.log(fileContextMap);
+      fileContextMap[fileId] = {name: message.name, content: message.content, enabled: true};
       saveContextFiles();
-      updateContextFilesUI();
+      addFileUI(fileId);
     }
   }
-});
 
-
-function updateContextFilesUI() {
-  const contextDiv = document.getElementById('context-files');
-  contextDiv.innerHTML = '';
-  if (window.contextFiles && window.contextFiles.length > 0) {
-    window.contextFiles.forEach((file, idx) => {
-      const fileElem = document.createElement('span');
-      fileElem.className = 'context-file';
-      fileElem.textContent = file.name;
-
-      const toggle = document.createElement('input');
-      toggle.type = 'checkbox';
-      toggle.checked = file.enabled;
-      toggle.onchange = () => { file.enabled = toggle.checked; };
-      fileElem.appendChild(toggle);
-
-      const removeBtn = document.createElement('button');
-      removeBtn.textContent = '✖';
-      removeBtn.className = 'remove-context-file';
-      removeBtn.onclick = () => {
-        window.contextFiles.splice(idx, 1);
-        updateContextFilesUI();
-        saveContextFiles();
-      };
-      fileElem.appendChild(removeBtn);
-
-      contextDiv.appendChild(fileElem);
-    });
+  if (message.type === 'userId'){
+    userId = message.value;
+    console.log(`************${userId}****************`)
   }
 }
 
+
+window.addEventListener('message', event => {
+  const message = event.data;
+  messageEventHandler(message);
+});
+
+
+function addFileUI(fileId){
+  const file = fileContextMap[fileId];
+  const fileElem = document.createElement('span');
+  fileElem.className = 'context-file';
+  fileElem.textContent = file.name;
+  // fileElem.setAttribute("id", fileId);
+
+  const toggle = document.createElement('input');
+  toggle.type = 'checkbox';
+  toggle.checked = file.enabled;
+  toggle.onchange = () => { file.enabled = toggle.checked; };
+  fileElem.appendChild(toggle);
+
+  const removeBtn = document.createElement('button');
+  removeBtn.textContent = '✖';
+  removeBtn.className = 'remove-context-file';
+
+  removeBtn.onclick = () => {
+    delete fileContextMap[fileId];
+    fileElem.remove();
+    saveContextFiles();
+  };
+  fileElem.appendChild(removeBtn);
+
+  contextDiv.appendChild(fileElem);
+}
+
 function saveContextFiles() {
-  vscode.setState({ contextFiles: window.contextFiles });
+  vscode.setState({ fileContextMap: fileContextMap });  //find what this does and if its needed
 }
 
 function loadContextFiles() {
   const state = vscode.getState();
-  window.contextFiles = (state && state.contextFiles) ? state.contextFiles : [];
-  updateContextFilesUI();
-}
-function summarizeTitle(title, wordLimit = 5, charLimit = 30) {
-  const words = title.split(' ');
-  let summary = words.slice(0, wordLimit).join(' ');
-
-  if (summary.length > charLimit) {
-    summary = summary.slice(0, charLimit).trim();
+  window.fileContextMap = (state && state.fileContextMap) ? state.fileContextMap : {};
+  for (let fileId in fileContextMap) {
+    addFileUI(fileId);
   }
-
-  return summary + (words.length > wordLimit || title.length > charLimit ? '...' : '');
 }
+
+
+
+
+
+
+
+
+
