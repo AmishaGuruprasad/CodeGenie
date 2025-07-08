@@ -107,3 +107,7 @@ Balances accuracy and efficiency by allowing attention heads to share keys and v
 **DS-1000** – Multilingual, domain-diverse benchmark created by DeepSeek
 
 ---
+# 🌐 Availability
+ **CodeGenie** is freely available as an open-source Visual Studio Code extension and can be run locally without any paid services.
+  
+ - **GitHub Repository:** [DeepSeek-Coder](https://github.com/deepseek-ai/DeepSeek-Coder)  
