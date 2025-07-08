@@ -72,7 +72,9 @@ CodeGenie can be applied in various real-world development and learning scenario
 
 ---
 
-# Instructions to run CodeGenie
+# Instructions to run and install CodeGenie
+ - Install the extension from **VS Code Extension store** link.
+
 ---
 # 📄 Research Paper Summary
 
@@ -111,7 +113,7 @@ Balances accuracy and efficiency by allowing attention heads to share keys and v
 
 ---
 # 🌐 Availability
- **CodeGenie** is freely available as an open-source Visual Studio Code extension and can be run locally without any paid services.
+ **CodeGenie** is freely available as an open-source Visual Studio Code extension and can be run locally without any paid services if the user wants to run everything locally others can download from extension store.
   
  - **GitHub Repository:** [DeepSeek-Coder](https://github.com/deepseek-ai/DeepSeek-Coder)
 
