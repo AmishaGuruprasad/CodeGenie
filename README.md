@@ -74,13 +74,13 @@ CodeGenie can be applied in various real-world development and learning scenario
 # 📄 Research Paper Summary
 
 
-The development of CodeGenie is heavily inspired by the research paper titled
-"DeepSeek-Coder: Towards General-Purpose Code Intelligence".
+The development of **CodeGenie** is heavily inspired by the research paper titled
+**"DeepSeek-Coder: Towards General-Purpose Code Intelligence"**.
 This paper presents a powerful family of open-source code language models trained specifically for programming tasks across over 80 programming languages.
 
 # 🔍 Key Contributions of the Paper
 🔤 **Tokenization**
-Uses Byte Pair Encoding (BPE) tokenizer via HuggingFace to efficiently handle multilingual programming syntax.
+Uses **Byte Pair Encoding (BPE)** tokenizer via HuggingFace to efficiently handle multilingual programming syntax.
 
 🔁 **Multi-Stage Pretraining (MSP)**
 The model is first trained on general programming data and later fine-tuned on high-quality, instruction-following datasets, improving reasoning and code generation.
