@@ -4,13 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="chat.css">
+    <script>
+        window.api_root = "{{API_ROOT}}";
+    </script>
 </head>
 
 <body>
     <header>
         <button id="toggle-sidebar-btn">☰</button>
         <button id="new-chat-btn">+</button>
-        <h1>Welcome to Code Genie</h1>
+        <h1>Code Genie</h1>
+        <button id="log-out-btn">Log out</button>
     </header>
 
     <div id="chat-container">

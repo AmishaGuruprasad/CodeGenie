@@ -9,6 +9,7 @@ const sidebar = document.getElementById("sidebar");
 const addChat = document.getElementById("new-chat-btn");
 const toggleContextBtn = document.getElementById('toggle-context-btn');
 const contextDiv = document.getElementById('context-files');
+const logOutBtn = document.getElementById("log-out-btn");
 
 toggleContextBtn.addEventListener('click', () => {
   const visible = contextDiv.style.display === 'flex' || contextDiv.style.display === 'block';
@@ -16,12 +17,9 @@ toggleContextBtn.addEventListener('click', () => {
   toggleContextBtn.textContent = visible ? '📂 Show Context Files' : '📂 Hide Context Files';
 });
 
-const api_root = `http://192.168.23.97:8000/`
+// const api_root = `https://joey-obliging-recently.ngrok-free.app/`
 
 let fileContextMap = {};
-
-let userId=""; 
-
 
 
 function addMessage(text, sender = 'user') {
@@ -31,7 +29,6 @@ function addMessage(text, sender = 'user') {
 
   if (sender === 'bot') {
     const html = marked.parse(text); //converts text to html content
-    console.log("hi");
     messageElem.innerHTML = html;
     renderResponse(messageElem);
   } else {
@@ -82,17 +79,20 @@ async function sendMessage(message) {
   try {
     let response = await fetch(`${api_root}chat`, {  
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-User-Id':`${userId}`
-      },
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req_body),
     });
     if (response.status === 404) {
       botMessageElem.textContent = 'Chat not found. Please create a new chat.';
       return;
     }
-    if (!response.ok) throw new Error('Network response was not ok');
+    if (response.status === 401){ 
+        vscode.postMessage({
+          type : "sessionExpired"
+        })
+    }
+    else if (!response.ok) throw new Error('Network response was not ok');
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let botText = '';
@@ -104,7 +104,7 @@ async function sendMessage(message) {
       responseArea.scrollTop = responseArea.scrollHeight;
     }
     renderResponse(botMessageElem);
-    addSidebarElement(chatid, message);
+    addSidebarElement(chatid, generateChatTitle(message));
     document.getElementById(chatid).classList.add("selected");
 
   } catch (error) {
@@ -135,8 +135,10 @@ function renderResponse(botMessageElem) {
       const pre = code.parentElement;
       const wrapper = document.createElement('div');
       wrapper.classList.add('code-wrapper');
-      pre.replaceWith(wrapper);
+      pre.parentNode.replaceChild(wrapper, pre);
       wrapper.appendChild(pre);
+      const btnContainer = document.createElement('div');
+      btnContainer.classList.add('code-button-container');
       const copyBtn = document.createElement('button');
       copyBtn.textContent = '📋';
       copyBtn.classList.add('copy-button-inline');
@@ -149,7 +151,22 @@ function renderResponse(botMessageElem) {
         });
       };
 
-      wrapper.appendChild(copyBtn);
+      const insertBtn = document.createElement('button');
+      insertBtn.textContent = '➕';
+      insertBtn.classList.add('copy-button-inline');
+      insertBtn.title = 'Insert code';
+      insertBtn.onclick = () => {
+        vscode.postMessage({
+          type:'insertCode',
+          code:code.textContent
+        });
+        insertBtn.textContent = '✅';
+        setTimeout(() => (insertBtn.textContent = '➕'), 1500);
+      };
+
+      btnContainer.appendChild(copyBtn);
+      btnContainer.appendChild(insertBtn);
+      wrapper.appendChild(btnContainer);
     });
 }
 
@@ -181,11 +198,14 @@ async function deleteChat(chatId) {
   try {
     const response = await fetch(`${api_root}chat/${chatId}`, {
       method: 'DELETE',
-      headers: { 
-        'X-User-Id':`${userId}`
-      },
+      credentials: 'include',
     });
-    if (!response.ok) throw new Error('Failed to delete chat');
+    if (response.status === 401){ 
+        vscode.postMessage({
+          type : "sessionExpired"
+        })
+    }
+    else if (!response.ok) throw new Error('Failed to delete chat');
 
     const del_li = document.getElementById(chatId);
     if (del_li.classList.contains("selected")) {
@@ -212,15 +232,19 @@ function showRenameInput(li) {
     if (newTitle && newTitle !== li.children[0].textContent) {
       const response = await fetch(`${api_root}chat/${li.getAttribute("id")}`, {
         method: "PATCH",
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-User-Id':`${userId}`
-         },
+        credentials: 'include',
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_title: newTitle }),
       });
+
       if (response.ok) {
         li.children[0].textContent = newTitle;
       } else {
+        if (response.status === 401){ 
+        vscode.postMessage({
+          type : "sessionExpired"
+        })
+        }
         addMessage("Failed to rename chat", "bot"); //change
       }
     }
@@ -302,17 +326,21 @@ async function loadChatHistory(chatId) {
   responseArea.innerHTML = "";
   try {
     const response = await fetch(`${api_root}chat/${chatId}`,{
-      headers : {
-        'X-User-Id':`${userId}`
-      }
-    });
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json',"ngrok-skip-browser-warning": "true"},
+        credentials: 'include'
+      });
     if (response.status === 404) {
       addMessage('No history found for this chat.', 'bot');
       return;
     }
+    else if (response.status === 401){ 
+        vscode.postMessage({
+          type : "sessionExpired"
+        })
+    }
     if (!response.ok) throw new Error('Failed to fetch chat history');
     const messages = await response.json();
-    console.log(messages);
     if (messages){
       for (const message of messages) {
         addMessage(message.user, 'user');
@@ -322,9 +350,9 @@ async function loadChatHistory(chatId) {
       console.log("No messages found") 
     }
   }
-  //  catch (error) {
-  //   addMessage('Error loading chat history: ' + error.message, 'bot');
-  // }
+   catch (error) {
+    addMessage('Error loading chat history: ' + error.message, 'bot');
+  }
   finally{}
   responseArea.scrollTop = responseArea.scrollHeight;
 }
@@ -361,31 +389,40 @@ function addSidebarElement (chatid, title) {
 async function fetchChatList() {
   try {
     const response = await fetch(`${api_root}list-all-chats`,{
-      headers : {
-        'X-User-Id':`${userId}`
-      }
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json',"ngrok-skip-browser-warning": "true"},
+      credentials: 'include'
     });
-    if (!response.ok) throw new Error('Failed to fetch chat list');
+    if (!response.ok){ 
+      if (response.status === 401){ 
+        vscode.postMessage({
+          type : "sessionExpired"
+        })
+      }
+      throw new Error('Failed to fetch chat list');
+    } 
     const allChats = await response.json();
     let chats = allChats; //list of chat objects 
+    sidebar.innerHTML = "" 
     chats.forEach((chat) => {
       addSidebarElement(chat.chat_id,chat.chat_title);
     });
   } catch (error) {
+  
+      sidebar.innerHTML = "";
+      let errorMessageContainer = document.createElement("div");
+      errorMessageContainer.innerText = error.message;
+      errorMessageContainer.classList.add("sidebar-error-message");
+      sidebar.append(errorMessageContainer)
+    
     console.log("Error fetching chatList");
   }
 }
 
 window.onload = async () => {
-  console.log("Hello from window.onload")
-    // await fetchChatList();
-    // loadContextFiles();  
+  await fetchChatList();
+  loadContextFiles();  
 };
-document.addEventListener("DOMContentLoaded", async () => {
-  console.log("📦 DOM fully loaded");
-  // await fetchChatList();
-  // loadContextFiles();
-});
 
 
 addChat.addEventListener('click', async () => {
@@ -411,7 +448,8 @@ async function generateFileId(fileContent) {
 
 async function messageEventHandler(message) {
   if (message.command === 'initContext') {  //this is for adding the current file to the context files
-    // fileContextMap = {}; // Reset file context map
+    fileContextMap = {}; // Reset file context map
+
     let fileId = await generateFileId(message.currentFileContent);
     fileContextMap[fileId] = {
         name : message.currentFileName,
@@ -419,7 +457,9 @@ async function messageEventHandler(message) {
         enabled : false
     };
 
-    addFileUI(fileId);
+    if (Object.keys(fileContextMap).length === 0) {
+      addFileUI(fileId);
+    }
   }
 
   if (message.type === 'fileContent') {
@@ -431,11 +471,6 @@ async function messageEventHandler(message) {
       saveContextFiles();
       addFileUI(fileId);
     }
-  }
-
-  if (message.type === 'userId'){
-    userId = message.value;
-    console.log(`************${userId}****************`)
   }
 }
 
@@ -474,7 +509,7 @@ function addFileUI(fileId){
 }
 
 function saveContextFiles() {
-  vscode.setState({ fileContextMap: fileContextMap });  //find what this does and if its needed
+  vscode.setState({ fileContextMap: fileContextMap }); 
 }
 
 function loadContextFiles() {
@@ -485,6 +520,23 @@ function loadContextFiles() {
   }
 }
 
+
+async function logout() {
+  try{
+    const response = await fetch(`${api_root}logout`,{
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json',"ngrok-skip-browser-warning": "true"},
+    credentials: 'include'
+    })
+    if(!response.ok) throw new Error(error);
+    vscode.postMessage({command: "goToLoginPage"});
+  }
+  catch(error) {
+    console.log(error);
+  }
+}
+
+logOutBtn.addEventListener('click', logout);
 
 
 
