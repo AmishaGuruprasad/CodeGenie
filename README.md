@@ -77,13 +77,16 @@ This paper presents a powerful family of open-source code language models traine
 
 ---
 
+
+
 ## 👥 Contributors Overview
 
-| Name        | GitHub Profile | Milestone 1 Video | Milestone 2 Video | PPT Link |
-|-------------|----------------|-------------------|-------------------|----------|
-| **Sreeram** | [GitHub](https://github.com/SreeramDeepak16) | [Milestone1](https://drive.google.com/file/d/1SD49YNDhXl1PcjgK3w0-w38PzQv02tmm/view?usp=drive_link) | - | [PPT](https://docs.google.com/presentation/d/1ArK3ZfMu6uLAwdvSsvYL4E6CpN0954DR/edit?usp=sharing&ouid=108593858457322442590&rtpof=true&sd=true) |
-| **Avyukth** | [GitHub](https://github.com/navyukth) | [Milestone1](https://drive.google.com/file/d/1CqTDUtkMXlZdYcaRfUEDwp0jemH1i8ug/view?usp=drivesdk) | - | [PPT](https://docs.google.com/presentation/d/130Q37Un-BBBfkXQhRB7DQgz_qiHl2gjT/edit?usp=drivesdk&ouid=112607316518503537263&rtpof=true&sd=true) |
-| **Amisha** | [GitHub](https://github.com/AmishaGuruprasad) | [Milestone1](https://drive.google.com/file/d/1ci1q8Rb0rUZoJz42Bu7EP2rYep5OD8ST/view?usp=sharing) | - | [PPT](https://docs.google.com/presentation/d/1qX8bOwxx9MXLMqAOqM4tdTvkX9_o59Cd/edit?usp=drive_link&ouid=109915896286526846905&rtpof=true&sd=true) |
-| **Jaswonthh** | [GitHub](https://github.com/gbj3112) | [Milestone1](https://youtu.be/zgGB5WPL1f0) | - | [PPT](https://docs.google.com/presentation/d/19HnpSE435junOzqXTc2QlK0rEIUeumUn/edit?usp=sharing&ouid=109488340599226794078&rtpof=true&sd=true) |
-| **Supradeep** | [GitHub](https://github.com/Supradeep22) | - | - | [PPT](https://docs.google.com/presentation/d/1TLdVOq0sTOoa0nlqIEYYJEtrA2xHNMUo/edit?usp=sharing&ouid=104267641385873067550&rtpof=true&sd=true) |
-| **Harshitha** | [GitHub](https://github.com/hxrshithx16) | [Milestone1](https://drive.google.com/file/d/12UfxA_QDkllWqt8D9hfUrhFR5lPXrA_D/view?usp=sharing) | - | [PPT](https://docs.google.com/presentation/d/1n_wZQR07qcyPoeiXuT6wBVYmXP9w_Yi3/edit?usp=sharing&ouid=105934201112247020732&rtpof=true&sd=true) |
+| Name                   | GitHub Profile                                    | Milestone 1 Video                                           | Milestone 2 Video                                           | PPT Link                                                    |
+|------------------------|---------------------------------------------------|-------------------------------------------------------------|-------------------------------------------------------------|-------------------------------------------------------------|
+| Sreeram | [Sreeram](https://github.com/SreeramDeepak16) | [Milestone1](https://drive.google.com/file/d/1SD49YNDhXl1PcjgK3w0-w38PzQv02tmm/view?usp=drive_link)     | [Milestone2](https://youtu.be/eftee455pTA)      |   [PPT](https://docs.google.com/presentation/d/1ArK3ZfMu6uLAwdvSsvYL4E6CpN0954DR/edit?usp=sharing&ouid=108593858457322442590&rtpof=true&sd=true)   |
+| Avyukth        | [Avyukth](https://github.com/navyukth)      |[Milestone1](https://drive.google.com/file/d/1CqTDUtkMXlZdYcaRfUEDwp0jemH1i8ug/view?usp=drivesdk)| [Milestone2](https://www.youtube.com/watch?v=t2yMfdRzrrs&ab_channel=AvyukthNunna)  | [PPT](https://docs.google.com/presentation/d/130Q37Un-BBBfkXQhRB7DQgz_qiHl2gjT/edit?usp=drivesdk&ouid=112607316518503537263&rtpof=true&sd=true)                   |
+| Amisha             | [Amisha](https://github.com/AmishaGuruprasad)      | [Milestone1](https://drive.google.com/file/d/1ci1q8Rb0rUZoJz42Bu7EP2rYep5OD8ST/view?usp=sharing)                      | [Milestone2](https://youtu.be/ktHp4AMfne8)  | [PPT](https://docs.google.com/presentation/d/1qX8bOwxx9MXLMqAOqM4tdTvkX9_o59Cd/edit?usp=drive_link&ouid=109915896286526846905&rtpof=true&sd=true)                    |
+| Jaswonthh         | [Jaswonthh](https://github.com/gbj3112) | [Milestone1](https://youtu.be/zgGB5WPL1f0)   | [Milestone2](https://youtu.be/QiHnDX_BLCo)                     | [PPT](https://docs.google.com/presentation/d/19HnpSE435junOzqXTc2QlK0rEIUeumUn/edit?usp=sharing&ouid=109488340599226794078&rtpof=true&sd=true)                   |
+| Supradeep            | [Supradeep](https://github.com/Supradeep22) | NULL   | [Milestone2](https://youtu.be/1DQYYw2N-VQ?si=wdHhf_t82Ykp8PDP) | [PPT](https://docs.google.com/presentation/d/1TLdVOq0sTOoa0nlqIEYYJEtrA2xHNMUo/edit?usp=sharing&ouid=104267641385873067550&rtpof=true&sd=true)                     |
+| Harshitha        | [Harshitha](https://github.com/hxrshithx16)| [Milestone1](https://drive.google.com/file/d/12UfxA_QDkllWqt8D9hfUrhFR5lPXrA_D/view?usp=sharing)      | [Milestone2](https://youtu.be/XnJJSXy8VPQ)   | [PPT](https://docs.google.com/presentation/d/1n_wZQR07qcyPoeiXuT6wBVYmXP9w_Yi3/edit?usp=sharing&ouid=105934201112247020732&rtpof=true&sd=true)                 |
+
