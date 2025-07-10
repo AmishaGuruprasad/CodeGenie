@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="chat.css">
+    <script> window.api_root = "{{API_ROOT}}"</script>
+
+</head>
+<body>
+    <header>
+        <h1>Code Genie</h1>
+    </header>
+
+    <div id="chat-container">
+
+        <div id="chat-main">
+
+            <div id="response-area" class="chat-scroll-area"></div>
+            <div id="input-area-with-context">
+
+                <div id="context-toolbar" style="margin-bottom: 6px;">
+                    <button id="toggle-context-btn" class="vscode-button">📂 Show Context Files</button>
+                </div>
+
+                <div id="input-area">
+                    <input type="text" name="prompt" id="input-txt-box" placeholder="Type your message..." />
+                    <button name="send" id="send-button">Send</button>
+                    <button id="attach-file-btn">Attach File</button>
+                    <input type="file" id="file-input" style="display: none;" multiple />
+                </div>
+
+                <div id="context-files" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="guest.js"></script>
+</body>
+
+</html>
