@@ -73,7 +73,8 @@ CodeGenie can be applied in various real-world development and learning scenario
 ---
 
 # Instructions to run and install CodeGenie
- - Install the extension from **VS Code Extension store** link.
+ - Install the extension from the **VS Code Extension Marketplace** or clone and build locally.
+
 
 ---
 # 📄 Research Paper Summary
