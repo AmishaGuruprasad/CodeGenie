@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        
+        .links{
+            cursor: pointer;
+            color: blue;
+        }
+        
+    </style>
+
+</head>
+
+<body>
+    <h3>Click below after clicking verification link sent to your email account</h3>
+    <h3 style="color: red; display: none;" id = "errorMessage"></h3>
+    <button id="continueBtn" >Continue to CodeGenie</button>
+    <p id="noAcc">Wrong Email ID/ link expired? <a id="signUpLink" class="links"><u>Back to Sign Up</u></a></p>
+
+    
+</body>
+
+<script>
+    const vscode = acquireVsCodeApi();
+    const emailId = "{{EMAILID}}";
+    const api_root = "{{API_ROOT}}";
+    const rememberMe = JSON.parse("{{REMEMBER ME}}");
+    const errorMessage = document.getElementById("errorMessage");
+    const h3 = document.createElement("h3");
+    h3.innerText = `Email sent to ${emailId}`
+    document.getElementsByTagName("body")[0].insertBefore(h3, document.getElementsByTagName("h3")[0]);
+    document.getElementById("continueBtn").addEventListener("click", async ()=>{
+        try{
+            const response = await fetch(`${api_root}is-verified?emailId=${emailId}&rememberMe=${rememberMe}`,{
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json',"ngrok-skip-browser-warning": "true"},
+                credentials: 'include'
+            });
+            const data = await response.json()
+            if (response.ok) {
+                vscode.postMessage({command: 'loginSuccess', display: data["message"]});
+            }
+            else if (response.status === 410){
+                errorMessage.innerText = "Link expired. Please sign in again";
+                errorMessage.style.display = "block";
+            }
+            else if (response.status === 404){
+                errorMessage.innerText = "Please click the link sent to your mail and try again";
+                errorMessage.style.display = "block";
+
+            }
+        }
+        catch(error){
+            console.log(error.message)
+        }
+        
+    });
+
+    document.getElementById("signUpLink").addEventListener("click", async ()=>{
+        try{
+            const response = await fetch(`${api_root}pending-requests?emailId=${emailId}`,{
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json',"ngrok-skip-browser-warning": "true"},
+                credentials: 'include'
+            });
+            vscode.postMessage({ command: 'openLogin' });
+
+        }
+        catch(error){
+            console.log(error.message)
+        }
+         
+    });
+</script>
+</html>
