@@ -1,0 +1,53 @@
+# Output and build artifacts
+dist/
+out/
+.vscode-test/
+*.vsix
+
+# Python model/data files
+*.pt
+*.bin
+*.h5
+*.ckpt
+*.onnx
+*.tflite
+*.pb
+*.pth
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+
+# Python-specific
+__pycache__/
+*.pyc
+*.egg-info/
+.env
+chat_history.json
+
+# System files
+.DS_Store
+
+# Node.js
+node_modules/
+
+# Python virtual environments
+code_genie_env/
+code_genie_main/
+
+# Other unused/experimental folders
+backend2/
+webview2/
+src2/
+
+# DeepSeek model (huge file)
+deepseek-coder-1.3b-instruct.Q4_K_M.gguf
+
+
+backend/database/__pycache__
+backend/database/__pycache__
+backend/models/__pycache__
+backend/routes/__pycache__
+
+.venv

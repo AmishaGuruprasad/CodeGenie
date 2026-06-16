@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h3>Checking session...</h3>
+    <script>
+        const vscode = acquireVsCodeApi();
+        const api_root = "{{API_ROOT}}"
+        console.log(window.origin);
+        console.log(api_root);
+        async function checkSession(){
+            const response = await fetch(`${api_root}validate`, { 
+                method: 'GET',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json', "ngrok-skip-browser-warning": "true" },
+            });
+            if (response.ok) {
+                vscode.postMessage({ command: 'openChat' });
+            } else {
+                vscode.postMessage({ command: 'openLogin' });
+            }
+        }
+        checkSession();
+
+    </script>
+</body>
+</html>
+

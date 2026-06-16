@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+python-dotenv
+pydantic
+email-validator
+motor
+bson
+smtplib
+bcrypt
+torch
+transformers
+cryptography
+pyngrok
+nest_asyncio
+requests
