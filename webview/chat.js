@@ -114,12 +114,15 @@ async function sendMessage(message) {
     }
     
 
+  }
+  catch(error){
+    alert("Something went wrong. Please reload the chat")
   } finally{}
 }
 
 function generateChatTitle(prompt, numKeywords = 10) {
   const text = prompt.toLowerCase().replace(/[^\w\s]/g, '');
-  const stopWords = new Set(['the', 'what', 'write', 'is', 'and', 'a', 'an', 'in', 'on', 'with', 'for', 'this', 'give', 'generate']);
+  const stopWords = new Set(['can', 'you', 'the', 'what', 'write', 'is', 'and', 'a', 'an', 'in', 'on', 'with', 'for', 'this', 'give', 'generate']);
   const words = text.split(/\s+/).filter(word => !stopWords.has(word) && word !== '');
   const freqMap = {};
   for (const word of words) {
@@ -218,8 +221,8 @@ async function deleteChat(chatId) {
     }
     del_li.remove();
   } catch (error) {
-    addMessage('Error deleting chat: ' + error.message, 'bot');
-  }
+    alert("Failed to delete chat. Please try again.");
+}
 }
 
 function showRenameInput(li) {

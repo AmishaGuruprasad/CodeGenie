@@ -1,9 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# from concurrent.futures import ThreadPoolExecutor
 
-
-# executor = ThreadPoolExecutor(max_workers=4)
+from exceptions.chat_exceptions import ChatNotFoundException
+from fastapi.responses import JSONResponse
 
 from routes.auth import router as auth_router
 from routes.chat import router as chat_router
@@ -23,32 +22,43 @@ logger = logging.getLogger(__name__)
 async def log_requests(request, call_next):
     logger.info("Request: %s %s", request.method, request.url.path)
 
-    try:
-        response = await call_next(request)
-        logger.info(
-            "Response %s %s -> %s",
-            request.method, 
-            request.url.path,
-            response.status_code
-        )
+    response = await call_next(request)
+    logger.info(
+        "Response %s %s -> %s",
+        request.method, 
+        request.url.path,
+        response.status_code
+    )
 
-        return response
-    except Exception:
-        logger.exception(
-            "Unhandled error during request: %s %s",
-            request.method,
-            request.url.path
-        )
-        raise
+    return response
+
+@app.exception_handler(ChatNotFoundException)
+async def chat_not_found_handler(request, exc):
+    return JSONResponse(
+        status_code=404,
+        content={
+            "success": False,
+            "message": f"Chat with id '{exc.chat_id}' not found"
+        }
+    )
 
 
-from cryptography.fernet import Fernet #type: ignore
-import os
-# key = Fernet.generate_key()
-# print(key)
-# with open("fernet.key", "wb") as f:
-#     f.write(key)
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
 
+    logger.exception(
+        "Unhandled exception on %s %s",
+        request.method,
+        request.url.path
+    )
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "message": "Internal Server Error"
+        }
+    )
 
 app.add_middleware(
     CORSMiddleware,

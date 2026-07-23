@@ -8,15 +8,22 @@ from datetime import  datetime, timezone, timedelta
 from email.message import EmailMessage
 import smtplib
 
+from config.settings import Settings
+
+
+EMAIL_ID = Settings.EMAIL_ID
+EMAIL_PASS = Settings.EMAIL_PASS
+
+api_root = Settings.API_ROOT
+
 import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s - %(name)s - %(message)s"
+)
+
 logger = logging.getLogger(__name__)
-
-EMAIL_ID = "codegenie.g405.2@gmail.com"
-EMAIL_PASS = "qyucjtgvsohouuxe"
-
-api_root = "https://joey-obliging-recently.ngrok-free.app"
-
 
 def hash_password(plain_password: str) -> bytes:
     return bcrypt.hashpw(plain_password.encode('utf-8'), bcrypt.gensalt())

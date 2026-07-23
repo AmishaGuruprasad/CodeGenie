@@ -2,14 +2,12 @@ from fastapi import APIRouter, Cookie
 from services.chat_service import get_llm_response, get_chat, update_chat, delete_chat, get_all_chats
 # from services.llm_service import auto_complete, generate_from_prompt
 from models.chat_models import ChatUpdate, NewChat, AutoCompleteRequest, GenerateRequest
-
-
+from fastapi.responses import StreamingResponse
 router = APIRouter()
 
 @router.post("/chat")
 async def post(new_chat: NewChat, sessionId: str = Cookie(None)):
-    return await get_llm_response(new_chat, sessionId)
- 
+    return StreamingResponse(get_llm_response(new_chat, sessionId), media_type="text/plain")
 
 
 @router.get("/chat/{chat_id}")
