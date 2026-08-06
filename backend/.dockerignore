@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment & Secrets
+.env
+.env.*
+fernet.key
+
+# IDE
+.vscode/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Python cache
+.pytest_cache/
+.mypy_cache/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+
+# Local model (if not deploying it)
+deepseek-coder-1.3b-instruct/
+models/
+
+# Build artifacts
+dist/
+build/

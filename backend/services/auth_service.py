@@ -32,7 +32,6 @@ def verify_password(plain_password: str, hashed_password: bytes) -> bool:
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
 
 async def validate_session(sessionId: str = Cookie(None)):
-    print(sessionId)
     if sessionId is None:
         raise HTTPException(
             status_code=401,
@@ -41,17 +40,13 @@ async def validate_session(sessionId: str = Cookie(None)):
     
     session = await sessions_collection.find_one({"sessionId": sessionId})
     if not session:
-        print("No session")
         raise HTTPException(status_code=401)
     if (session["expires_at"] < datetime.now(timezone.utc)):
         await sessions_collection.delete_one({"sessionId": sessionId})
         raise HTTPException(
             status_code = 401,
             detail = "Session expired"
-        )
-
-    print("Found session")
-    
+        )   
     
     
     user = await usersLogin_collection.find_one({"emailId": session["emailId"]})
@@ -178,8 +173,6 @@ async def verify_user( emailId:str, rememberMe : bool, response: Response):
         return {"message":f"Welcome, {user['name']}"}
     pending_user = await pendingUsers_collection.find_one({"emailId":emailId})
     if (pending_user):
-        temp = type(pending_user["expires_at"])
-        print("type of expires at : ", temp)
         if (pending_user["expires_at"] > datetime.now(timezone.utc)):
             raise HTTPException(status_code = 404, detail="Link not clicked")
         else:

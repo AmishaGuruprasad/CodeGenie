@@ -12,7 +12,9 @@ let debounceTimer: NodeJS.Timeout | undefined;
 let lastPromiserResolver: ((value:vscode.InlineCompletionList | PromiseLike<vscode.InlineCompletionList>) => void ) | undefined;
 
 
-const api_root = "https://joey-obliging-recently.ngrok-free.app/"
+// const api_root = "https://joey-obliging-recently.ngrok-free.app/"
+const api_root = "http://127.0.0.1:8000/"
+
 
 let currentFileContent = "";
 let currentFilePath = "";

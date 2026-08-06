@@ -54,10 +54,12 @@ backend/config/__pycache__
 .venv
 
 backend/config/settings.py
+backend/.env
 
 .vscode
 
 fernet.key
 
 Demo
+
 

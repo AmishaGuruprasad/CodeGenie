@@ -17,8 +17,8 @@ toggleContextBtn.addEventListener('click', () => {
   toggleContextBtn.textContent = visible ? '📂 Show Context Files' : '📂 Hide Context Files';
 });
 
-const api_root = `https://joey-obliging-recently.ngrok-free.app/`
-
+const api_root = window.api_root
+console.log("API ROOT: "+api_root)
 let fileContextMap = {};
 
 
