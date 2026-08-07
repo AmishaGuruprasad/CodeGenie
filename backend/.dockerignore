@@ -34,7 +34,6 @@ docker-compose*.yml
 
 # Local model (if not deploying it)
 deepseek-coder-1.3b-instruct/
-models/
 
 # Build artifacts
 dist/
