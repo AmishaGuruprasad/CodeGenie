@@ -134,7 +134,7 @@ async def login_user(payload: LoginRequest, response: Response):
 
 async def createSession(emailId: str, rememberMe: bool, response: Response):
     sessionId = str(uuid.uuid4())
-    expiry = datetime.now(timezone.utc) + timedelta(minutes=4) if rememberMe else datetime.now(timezone.utc) + timedelta(minutes=2)
+    expiry = datetime.now(timezone.utc) + timedelta(minutes=10) if rememberMe else datetime.now(timezone.utc) + timedelta(minutes=5)
     cookieMaxAge = 7*24*60*60 if rememberMe else 1*24*60*60
 
     await sessions_collection.insert_one({
@@ -150,7 +150,7 @@ async def createSession(emailId: str, rememberMe: bool, response: Response):
         httponly = True,
         max_age = cookieMaxAge,
         samesite = "none",
-        secure = True
+        secure = False
     )
 
 async def verify_email(token:str):
