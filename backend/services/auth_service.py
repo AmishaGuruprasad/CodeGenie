@@ -149,7 +149,7 @@ async def createSession(emailId: str, rememberMe: bool, response: Response):
         value = sessionId,
         httponly = True,
         max_age = cookieMaxAge,
-        samesite = "none",
+        samesite = "lax",
         secure = False
     )
 
